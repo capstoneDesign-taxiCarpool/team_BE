@@ -26,5 +26,5 @@ jobs:
 
     - name: Deploy to EC2
       run: |
-        scp -i ${{ secrets.EC2_KEY }} ./build/libs/app.jar ec2-user@${{ secrets.EC2_HOST }}:/home/ec2-user/app.jar
-        ssh -i ${{ secrets.EC2_KEY }} ec2-user@${{ secrets.EC2_HOST }} "pkill -f 'java' || true && nohup java -jar /home/ec2-user/app.jar > log.txt 2>&1 &"
+        scp -i ${{ secrets.EC2_KEY }} build/libs/taxi-carpool-0.0.1-SNAPSHOT.jar ec2-user@${{ secrets.EC2_HOST }}:/home/ec2-user/taxi-carpool-0.0.1-SNAPSHOT.jar
+        ssh -i ${{ secrets.EC2_KEY }} ec2-user@${{ secrets.EC2_HOST }} "pkill -f 'java' || true && nohup java -jar /home/ec2-user/taxi-carpool-0.0.1-SNAPSHOT.jar > log.txt 2>&1 &"
