@@ -20,9 +20,11 @@ jobs:
 
     - name: Grant execute permission to Gradle wrapper
       run: chmod +x ./gradlew
+      working-directory: ./taxi-carpool
 
     - name: Build
       run: ./gradlew clean build
+      working-directory: ./taxi-carpool
 
     - name: Deploy to EC2
       run: |
