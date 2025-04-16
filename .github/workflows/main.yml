@@ -25,9 +25,14 @@ jobs:
     - name: Build
       run: ./gradlew clean build
       working-directory: ./taxi-carpool
+      env:
+        EMAIL_VERIFICATION_GOOGLE_ID: ${{ secrets.EMAIL_VERIFICATION_GOOGLE_ID }}
+        EMAIL_VERIFICATION_GOOGLE_PW: ${{ secrets.EMAIL_VERIFICATION_GOOGLE_PW }}
+        EMAIL_VERIFICATION_GOOGLE_ADDRESS: ${{ secrets.EMAIL_VERIFICATION_GOOGLE_ADDRESS }}
+        KAKAO_APP_REST_KEY: ${{ secrets.KAKAO_APP_REST_KEY }}
 
     - name: Deploy to EC2
       run: |
         ssh -i ${{ secrets.EC2_KEY }} ec2-user@${{ secrets.EC2_HOST }} "mkdir -p /home/ec2-user/team_BE/taxi-carpool/build/libs/"
         scp -i ${{ secrets.EC2_KEY }} build/libs/taxi-carpool-0.0.1-SNAPSHOT.jar ec2-user@${{ secrets.EC2_HOST }}:/home/ec2-user/team_BE/taxi-carpool/build/libs/taxi-carpool-0.0.1-SNAPSHOT.jar
-        ssh -i ${{ secrets.EC2_KEY }} ec2-user@${{ secrets.EC2_HOST }} "pkill -f 'java' || true && nohup java -jar /home/ec2-user/team_BE/taxi-carpool/build/libs/taxi-carpool-0.0.1-SNAPSHOT.jar > log.txt 2>&1 &"
+        ssh -i ${{ secrets.EC2_KEY }} ec2-user@${{ secrets.EC2_HOST }} "pkill -f 'java' || true && nohup EMAIL_VERIFICATION_GOOGLE_ID=${{ secrets.EMAIL_VERIFICATION_GOOGLE_ID }} EMAIL_VERIFICATION_GOOGLE_PW=${{ secrets.EMAIL_VERIFICATION_GOOGLE_PW }} EMAIL_VERIFICATION_GOOGLE_ADDRESS=${{ secrets.EMAIL_VERIFICATION_GOOGLE_ADDRESS }} KAKAO_APP_REST_KEY=${{ secrets.KAKAO_APP_REST_KEY }} java -jar /home/ec2-user/team_BE/taxi-carpool/build/libs/taxi-carpool-0.0.1-SNAPSHOT.jar > log.txt 2>&1 &"
