@@ -23,6 +23,11 @@ jobs:
         echo "${{ secrets.EC2_KEY }}" > key.pem
         chmod 600 key.pem
 
+    - name: Add EC2 Host to Known Hosts
+      run: |
+        mkdir -p ~/.ssh
+        ssh-keyscan -H ${{ secrets.EC2_HOST }} >> ~/.ssh/known_hosts
+
     - name: Grant execute permission to Gradle wrapper
       run: chmod +x ./gradlew
       working-directory: ./taxi-carpool
