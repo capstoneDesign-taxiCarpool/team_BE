@@ -42,7 +42,6 @@ jobs:
         KAKAO_APP_REST_KEY: ${{ secrets.KAKAO_APP_REST_KEY }}
 
     - name: Deploy to EC2
-      working-directory: ./taxi-carpool
       run: |
         ssh -i key.pem ec2-user@${{ secrets.EC2_HOST }} "mkdir -p /home/ec2-user/team_BE/taxi-carpool/build/libs/"
         scp -i key.pem build/libs/taxi-carpool-0.0.1-SNAPSHOT.jar ec2-user@${{ secrets.EC2_HOST }}:/home/ec2-user/team_BE/taxi-carpool/build/libs/taxi-carpool-0.0.1-SNAPSHOT.jar
