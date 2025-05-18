@@ -61,26 +61,28 @@ jobs:
         ssh -i key.pem ec2-user@${{ secrets.EC2_HOST }} << EOF
         set -eux
 
-        # 포트 8080 사용 중인 PID 조회
-        PID=$(sudo lsof -ti :8080) || true
+        # 현재 떠 있는 모든 Java 프로세스 PID 수집
+        PIDS=$(ps -ef | grep java | grep -v grep | awk '{print $2}') || true
     
-        if [ -n "$PID" ]; then
-          echo "Killing old process: $PID"
-          kill -15 $PID      # graceful
-          sleep 5            # 종료 대기
-          if kill -0 $PID 2>/dev/null; then
-            echo "Force kill: $PID"
-            kill -9 $PID
-          fi
-    
-          # 포트 해제 대기
-          while sudo lsof -ti :8080 >/dev/null; do
-            echo "waiting for port 8080 to be freed..."
-            sleep 1
+        if [ -n "$PIDS" ]; then
+          echo "Stopping Java processes: $PIDS"
+          # 우선 SIGTERM 으로 graceful shutdown 시도
+          for PID in $PIDS; do
+            kill -15 $PID || true
           done
-          echo "port 8080 is now free"
+    
+          # 잠시 대기
+          sleep 5
+    
+          # 여전히 살아있는 프로세스는 SIGKILL
+          for PID in $PIDS; do
+            if kill -0 $PID 2>/dev/null; then
+              echo "Force killing: $PID"
+              kill -9 $PID || true
+            fi
+          done
         else
-          echo "no process on port 8080"
+          echo "No Java process found"
         fi
     
         export SPRING_DATASOURCE_URL='${{ secrets.SPRING_DATASOURCE_URL }}'
