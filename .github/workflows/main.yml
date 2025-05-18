@@ -62,7 +62,7 @@ jobs:
         set -eux
 
         # 포트 8080 사용 중인 PID 조회
-        PID=$(lsof -ti tcp:8080) || true
+        PID=$(sudo lsof -ti :8080) || true
     
         if [ -n "$PID" ]; then
           echo "Killing old process: $PID"
@@ -74,7 +74,7 @@ jobs:
           fi
     
           # 포트 해제 대기
-          while lsof -ti tcp:8080 >/dev/null; do
+          while sudo lsof -ti :8080 >/dev/null; do
             echo "waiting for port 8080 to be freed..."
             sleep 1
           done
