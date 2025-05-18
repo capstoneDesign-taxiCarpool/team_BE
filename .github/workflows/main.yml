@@ -58,7 +58,7 @@ jobs:
 
     - name: Start Spring App on EC2
       run: |
-        ssh -i key.pem ec2-user@${{ secrets.EC2_HOST }} << EOF
+        ssh -i key.pem ec2-user@${{ secrets.EC2_HOST }} << 'EOF'
         set -eux
 
         # 현재 떠 있는 모든 Java 프로세스 PID 수집
