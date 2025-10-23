@@ -18,7 +18,7 @@ public interface PartyRepository extends JpaRepository<PartyEntity, Long> {
 
     Optional<PartyEntity> findByIdAndIsDeletedFalse(Long partyId);
 
-    Page<PartyEntity> findAllByIsDeletedFalse(Pageable pageable);
+    Page<PartyEntity> findAllByIsDeletedFalseAndStartDateTimeGreaterThanEqual(LocalDateTime now, Pageable pageable);
 
     // 모든 파라미터가 온 경우
     @Query(value = "SELECT p.*, " +
@@ -33,9 +33,9 @@ public interface PartyRepository extends JpaRepository<PartyEntity, Long> {
         " )" +
         " ) AS total_distance " +
         "FROM party p " +
-        "WHERE p.is_deleted = false " +
+        "WHERE p.is_deleted = false AND p.start_date_time >= NOW() " +
         "ORDER BY total_distance ASC, ABS(TIMESTAMPDIFF(MINUTE, p.start_date_time, :userDepartureTime)) ASC",
-        countQuery = "SELECT COUNT(*) FROM party p WHERE p.is_deleted = false",
+        countQuery = "SELECT COUNT(*) FROM party p WHERE p.is_deleted = false AND p.start_date_time >= NOW()",
         nativeQuery = true)
     Page<PartyEntity> findCustomPartyList(
         @Param("userDepartureLng") Double userDepartureLng,
@@ -54,9 +54,9 @@ public interface PartyRepository extends JpaRepository<PartyEntity, Long> {
         +
         " ) AS total_distance " +
         "FROM party p " +
-        "WHERE p.is_deleted = false " +
+        "WHERE p.is_deleted = false AND p.start_date_time >= NOW() " +
         "ORDER BY total_distance ASC, ABS(TIMESTAMPDIFF(MINUTE, p.start_date_time, :userDepartureTime)) ASC",
-        countQuery = "SELECT COUNT(*) FROM party p WHERE p.is_deleted = false",
+        countQuery = "SELECT COUNT(*) FROM party p WHERE p.is_deleted = false AND p.start_date_time >= NOW()",
         nativeQuery = true)
     Page<PartyEntity> findCustomPartyList(
         @Param("userDestinationLng") Double userDestinationLng,
@@ -78,9 +78,9 @@ public interface PartyRepository extends JpaRepository<PartyEntity, Long> {
         " )" +
         " ) AS total_distance " +
         "FROM party p " +
-        "WHERE p.is_deleted = false " +
-        "ORDER BY total_distance ASC",
-        countQuery = "SELECT COUNT(*) FROM party p WHERE p.is_deleted = false",
+        "WHERE p.is_deleted = false AND p.start_date_time >= NOW() " +
+        "ORDER BY total_distance ASC, p.start_date_time ASC",
+        countQuery = "SELECT COUNT(*) FROM party p WHERE p.is_deleted = false AND p.start_date_time >= NOW()",
         nativeQuery = true)
     Page<PartyEntity> findCustomPartyList(
         @Param("userDepartureLng") Double userDepartureLng,
@@ -90,8 +90,15 @@ public interface PartyRepository extends JpaRepository<PartyEntity, Long> {
         Pageable pageable
     );
 
-    @Query("SELECT p FROM party p JOIN p.memberEntities m WHERE m.id = :memberId AND p.isDeleted = false ORDER BY p.startDateTime DESC")
-    List<PartyEntity> findAllActivePartiesByMemberId(@Param("memberId") Long memberId);
+    @Query("SELECT p FROM party p JOIN p.memberEntities m WHERE m.id = :memberId AND p.isDeleted = false " +
+        "ORDER BY " +
+        // 1. 종료되지 않은 파티(1)가 종료된 파티(2)보다 먼저 오도록 정렬
+        "CASE WHEN p.startDateTime >= :now THEN 1 ELSE 2 END ASC, " +
+        // 2. 종료되지 않은 파티 그룹 내에서는 출발 시간 오름차순 (가까운 순)
+        "CASE WHEN p.startDateTime >= :now THEN p.startDateTime END ASC, " +
+        // 3. 종료된 파티 그룹 내에서는 출발 시간 내림차순 (최근에 끝난 순)
+        "CASE WHEN p.startDateTime < :now THEN p.startDateTime END DESC")
+    List<PartyEntity> findAllByMemberIdSorted(@Param("memberId") Long memberId, @Param("now") LocalDateTime now);
 
     /**
      * 출발 알림을 보내야 하는 파티 목록을 조회합니다.
