@@ -83,8 +83,8 @@ public class PartyService {
      */
     @Transactional(readOnly = true)
     public Page<PartyResponseDTO> getPartyList(Integer page, Integer size) {
-        Pageable pageable = PageRequest.of(page, size, Sort.by(Direction.DESC, "createdAt"));
-        Page<PartyEntity> partyEntities = partyRepository.findAllByIsDeletedFalse(pageable);
+        Pageable pageable = PageRequest.of(page, size, Sort.by(Direction.ASC, "startDateTime"));
+        Page<PartyEntity> partyEntities = partyRepository.findAllByIsDeletedFalseAndStartDateTimeGreaterThanEqual(LocalDateTime.now(), pageable);
         return partyEntities.map(partyMapper::convertToResponseDTO);
     }
 
@@ -348,9 +348,9 @@ public class PartyService {
             throw new MemberNotFoundException("해당 멤버가 존재하지 않습니다: " + memberId);
         }
 
-        List<PartyEntity> activeParties = partyRepository.findAllActivePartiesByMemberId(memberId);
+        List<PartyEntity> myParties = partyRepository.findAllByMemberIdSorted(memberId, LocalDateTime.now());
 
-        return activeParties.stream()
+        return myParties.stream()
             .map(partyMapper::convertToResponseDTO)
             .toList();
     }
