@@ -14,6 +14,7 @@ import edu.kangwon.university.taxicarpool.party.partyException.MemberNotInPartyE
 import edu.kangwon.university.taxicarpool.party.partyException.PartyNotFoundException;
 import edu.kangwon.university.taxicarpool.party.partyException.UnauthorizedHostAccessException;
 import edu.kangwon.university.taxicarpool.profanity.ProfanityService;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.stream.Collectors;
 import org.springframework.data.domain.PageRequest;
@@ -183,8 +184,14 @@ public class ChattingService {
 
         // 2. 알림 받을 사람이 있으면 푸시 발송
         if (!recipientIds.isEmpty()) {
+            DateTimeFormatter timeFormatter = DateTimeFormatter.ofPattern("HH시 mm분");
+            String formattedTime = party.getStartDateTime().format(timeFormatter);
+
+            String destinationName = party.getEndPlace().getName();
+            String title = String.format("%s %s행 카풀방", formattedTime, destinationName);
+
             PushMessageDTO pushMessage = PushMessageDTO.builder()
-                .title(party.getName()) // 파티방 이름을 알림 제목으로
+                .title(title)
                 .body(String.format("%s: %s", sender.getNickname(), masked)) // "닉네임: 메시지 내용"
                 .type("CHAT_MESSAGE") // 클라이언트와 협의된 타입
                 .build();
