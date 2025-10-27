@@ -45,10 +45,12 @@ public class PartySchedulerService {
 
             // 3. 푸시 메시지 생성
             String formattedDepartureTime = party.getStartDateTime().format(DateTimeFormatter.ofPattern("HH:mm"));
+            String destinationName = party.getEndPlace().getName();
             PushMessageDTO pushMessage = PushMessageDTO.builder()
                 .title("곧 택시가 출발해요! 🚕")
-                .body(String.format("'%s' 파티가 10분 뒤(%s) 출발합니다. 늦지 않게 준비해주세요!",
-                    party.getName(), formattedDepartureTime))
+                // 본문 내용을 party.getName() 대신 destinationName으로 변경
+                .body(String.format("%s행 카풀이 10분 뒤(%s) 출발합니다. 늦지 않게 준비해주세요!",
+                    destinationName, formattedDepartureTime))
                 .type("DEPARTURE_REMINDER")
                 .build();
             pushMessage.getData().put("partyId", String.valueOf(party.getId()));
