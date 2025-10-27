@@ -18,6 +18,7 @@ import edu.kangwon.university.taxicarpool.party.partyException.PartyInvalidMaxPa
 import edu.kangwon.university.taxicarpool.party.partyException.PartyNotFoundException;
 import edu.kangwon.university.taxicarpool.party.partyException.UnauthorizedHostAccessException;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -252,11 +253,17 @@ public class PartyService {
 
         // FCM 푸시 발송
         if (!targetIds.isEmpty()) {
+            DateTimeFormatter timeFormatter = DateTimeFormatter.ofPattern("HH시 mm분");
+            String formattedTime = partyEntity.getStartDateTime().format(timeFormatter);
+            String destinationName = partyEntity.getEndPlace().getName();
+
+            String title = String.format("%s %s행 카풀방", formattedTime, destinationName);
+            String body = "호스트에 의해 파티가 삭제되었습니다.";
+
             PushMessageDTO msg = PushMessageDTO.builder()
-                .title("파티가 삭제되었습니다")
-                .body("호스트가 파티를 삭제했어요.")
+                .title(title)
+                .body(body)
                 .type("PARTY_DELETED")
-                // 메시지 타입이 notification이지만 프론트의 딥링크/라우팅에서 사용하기 유용해서 data도 세팅
                 .data(Map.of("partyId", String.valueOf(partyId)))
                 .build();
             fcmPushService.sendPushToUsers(targetIds, msg);
