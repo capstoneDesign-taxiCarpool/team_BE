@@ -1,5 +1,6 @@
 package edu.kangwon.university.taxicarpool.fcm;
 
+import edu.kangwon.university.taxicarpool.member.MemberEntity;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -41,9 +42,9 @@ public interface FcmTokenRepository extends JpaRepository<FcmTokenEntity, Long> 
     void revokeTokenByFcmToken(@Param("fcmToken") String fcmToken);
 
     /**
-     * 회원 삭제 전에 FK 충돌을 막기 위해 해당 회원의 모든 FCM 토큰을 물리 삭제
+     * 회원 엔티티로 해당 회원의 모든 FCM 토큰을 물리 삭제 (회원 탈퇴 시 사용)
      */
     @Modifying
-    @Query("DELETE FROM fcm_token f WHERE f.member.id = :userId")
-    void deleteAllByUserId(@Param("userId") Long userId);
+    @Query("DELETE FROM fcm_token f WHERE f.member = :member")
+    void deleteAllByMember(@Param("member") MemberEntity member);
 }
