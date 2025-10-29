@@ -1,6 +1,9 @@
 package edu.kangwon.university.taxicarpool.member;
 
 import edu.kangwon.university.taxicarpool.auth.RefreshTokenRepository;
+import edu.kangwon.university.taxicarpool.auth.reset.PasswordResetTokenRepository;
+import edu.kangwon.university.taxicarpool.chatting.MessageRepository;
+import edu.kangwon.university.taxicarpool.email.EmailVerificationRepository;
 import edu.kangwon.university.taxicarpool.fcm.FcmTokenRepository;
 import edu.kangwon.university.taxicarpool.member.dto.MemberCreateDTO;
 import edu.kangwon.university.taxicarpool.member.dto.MemberDetailDTO;
@@ -9,6 +12,9 @@ import edu.kangwon.university.taxicarpool.member.dto.MemberUpdateDTO;
 import edu.kangwon.university.taxicarpool.member.exception.DuplicatedEmailException;
 import edu.kangwon.university.taxicarpool.member.exception.DuplicatedNicknameException;
 import edu.kangwon.university.taxicarpool.member.exception.MemberNotFoundException;
+import edu.kangwon.university.taxicarpool.party.PartyEntity;
+import java.util.ArrayList;
+import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -23,6 +29,9 @@ public class MemberService {
     private final RefreshTokenRepository refreshTokenRepository;
     private final MemberMapper memberMapper;
     private final FcmTokenRepository fcmTokenRepository;
+    private final MessageRepository messageRepository;
+    private final PasswordResetTokenRepository passwordResetTokenRepository;
+    private final EmailVerificationRepository emailVerificationRepository;
 
     /**
      * 회원을 생성합니다.
@@ -112,15 +121,28 @@ public class MemberService {
      */
     @Transactional
     public MemberDetailDTO deleteMember(Long memberId) {
-        MemberEntity entity = memberRepository.findById(memberId)
+        MemberEntity member = memberRepository.findById(memberId)
             .orElseThrow(() -> new MemberNotFoundException("회원을 찾을 수 없습니다: " + memberId));
 
-        refreshTokenRepository.findByMember(entity).ifPresent(refreshTokenRepository::delete);
+        // ConcurrentModificationException 방지를 위해 리스트 복사 후 순회
+        List<PartyEntity> partiesToLeave = new ArrayList<>(member.getParties());
+        for (PartyEntity party : partiesToLeave) {
+            party.leave(memberId);
+            // @Transactional 환경이므로 partyRepository.save() 호출은 생략 가능 (Dirty Checking)
+        }
+        // Member 엔티티의 컬렉션에서도 명시적으로 제거
+        member.getParties().clear();
 
-        fcmTokenRepository.deleteAllByUserId(memberId);
+        messageRepository.setSenderToNullByMember(member);
 
-        memberRepository.delete(entity);
-        return memberMapper.toDetailDTO(entity);
+        passwordResetTokenRepository.deleteAllByMember(member);
+
+        refreshTokenRepository.findByMember(member).ifPresent(refreshTokenRepository::delete);
+
+        fcmTokenRepository.deleteAllByMember(member);
+
+        memberRepository.delete(member);
+        return memberMapper.toDetailDTO(member);
     }
 
     /**
