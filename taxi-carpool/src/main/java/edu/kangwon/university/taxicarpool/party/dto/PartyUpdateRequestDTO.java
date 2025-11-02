@@ -4,6 +4,7 @@ import edu.kangwon.university.taxicarpool.map.MapPlaceDTO;
 import edu.kangwon.university.taxicarpool.profanity.NoProfanity;
 import jakarta.validation.constraints.Future;
 import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import lombok.Data;
@@ -25,6 +26,7 @@ public class PartyUpdateRequestDTO {
     private String comment;
 
     @Max(value = 4, message = "택시의 최대 탑승 인원 수는 4명입니다.")
+    @Min(value = 2, message = "카풀의 최소 인원 수는 2명입니다.")
     private int maxParticipantCount;
 
     private MapPlaceDTO startPlace;
