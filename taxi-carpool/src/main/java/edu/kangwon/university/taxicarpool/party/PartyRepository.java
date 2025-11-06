@@ -18,7 +18,19 @@ public interface PartyRepository extends JpaRepository<PartyEntity, Long> {
 
     Optional<PartyEntity> findByIdAndIsDeletedFalse(Long partyId);
 
-    Page<PartyEntity> findAllByIsDeletedFalseAndStartDateTimeGreaterThanEqual(LocalDateTime now, Pageable pageable);
+    @Query(value = "SELECT p FROM party p " +
+        "WHERE p.isDeleted = false " +
+        "AND p.startDateTime >= :now " +
+        "AND NOT EXISTS (SELECT 1 FROM p.memberEntities m WHERE m.id = :memberId)",
+        countQuery = "SELECT COUNT(p) FROM party p " +
+            "WHERE p.isDeleted = false " +
+            "AND p.startDateTime >= :now " +
+            "AND NOT EXISTS (SELECT 1 FROM p.memberEntities m WHERE m.id = :memberId)")
+    Page<PartyEntity> findGeneralPartyListNotJoined(
+        @Param("memberId") Long memberId,
+        @Param("now") LocalDateTime now,
+        Pageable pageable
+    );
 
     // 모든 파라미터가 온 경우
     @Query(value = "SELECT p.*, " +
@@ -34,10 +46,14 @@ public interface PartyRepository extends JpaRepository<PartyEntity, Long> {
         " ) AS total_distance " +
         "FROM party p " +
         "WHERE p.is_deleted = false AND p.start_date_time >= NOW() " +
+        "AND p.party_id NOT IN (SELECT pm.party_id FROM party_member pm WHERE pm.member_id = :memberId) " +
         "ORDER BY total_distance ASC, ABS(TIMESTAMPDIFF(MINUTE, p.start_date_time, :userDepartureTime)) ASC",
-        countQuery = "SELECT COUNT(*) FROM party p WHERE p.is_deleted = false AND p.start_date_time >= NOW()",
+        countQuery = "SELECT COUNT(*) FROM party p " +
+            "WHERE p.is_deleted = false AND p.start_date_time >= NOW() " +
+            "AND p.party_id NOT IN (SELECT pm.party_id FROM party_member pm WHERE pm.member_id = :memberId)",
         nativeQuery = true)
     Page<PartyEntity> findCustomPartyList(
+        @Param("memberId") Long memberId,
         @Param("userDepartureLng") Double userDepartureLng,
         @Param("userDepartureLat") Double userDepartureLat,
         @Param("userDestinationLng") Double userDestinationLng,
@@ -55,10 +71,14 @@ public interface PartyRepository extends JpaRepository<PartyEntity, Long> {
         " ) AS total_distance " +
         "FROM party p " +
         "WHERE p.is_deleted = false AND p.start_date_time >= NOW() " +
+        "AND p.party_id NOT IN (SELECT pm.party_id FROM party_member pm WHERE pm.member_id = :memberId) " +
         "ORDER BY total_distance ASC, ABS(TIMESTAMPDIFF(MINUTE, p.start_date_time, :userDepartureTime)) ASC",
-        countQuery = "SELECT COUNT(*) FROM party p WHERE p.is_deleted = false AND p.start_date_time >= NOW()",
+        countQuery = "SELECT COUNT(*) FROM party p " +
+            "WHERE p.is_deleted = false AND p.start_date_time >= NOW() " +
+            "AND p.party_id NOT IN (SELECT pm.party_id FROM party_member pm WHERE pm.member_id = :memberId)",
         nativeQuery = true)
     Page<PartyEntity> findCustomPartyList(
+        @Param("memberId") Long memberId,
         @Param("userDestinationLng") Double userDestinationLng,
         @Param("userDestinationLat") Double userDestinationLat,
         @Param("userDepartureTime") LocalDateTime userDepartureTime,
@@ -79,10 +99,14 @@ public interface PartyRepository extends JpaRepository<PartyEntity, Long> {
         " ) AS total_distance " +
         "FROM party p " +
         "WHERE p.is_deleted = false AND p.start_date_time >= NOW() " +
+        "AND p.party_id NOT IN (SELECT pm.party_id FROM party_member pm WHERE pm.member_id = :memberId) " +
         "ORDER BY total_distance ASC, p.start_date_time ASC",
-        countQuery = "SELECT COUNT(*) FROM party p WHERE p.is_deleted = false AND p.start_date_time >= NOW()",
+        countQuery = "SELECT COUNT(*) FROM party p " +
+            "WHERE p.is_deleted = false AND p.start_date_time >= NOW() " +
+            "AND p.party_id NOT IN (SELECT pm.party_id FROM party_member pm WHERE pm.member_id = :memberId)",
         nativeQuery = true)
     Page<PartyEntity> findCustomPartyList(
+        @Param("memberId") Long memberId,
         @Param("userDepartureLng") Double userDepartureLng,
         @Param("userDepartureLat") Double userDepartureLat,
         @Param("userDestinationLng") Double userDestinationLng,

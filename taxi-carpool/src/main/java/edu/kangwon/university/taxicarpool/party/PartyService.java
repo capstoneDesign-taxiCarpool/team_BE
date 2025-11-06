@@ -83,9 +83,11 @@ public class PartyService {
      * @return 파티 응답 DTO의 페이지
      */
     @Transactional(readOnly = true)
-    public Page<PartyResponseDTO> getPartyList(Integer page, Integer size) {
+    public Page<PartyResponseDTO> getPartyList(Long memberId, Integer page, Integer size) {
         Pageable pageable = PageRequest.of(page, size, Sort.by(Direction.ASC, "startDateTime"));
-        Page<PartyEntity> partyEntities = partyRepository.findAllByIsDeletedFalseAndStartDateTimeGreaterThanEqual(LocalDateTime.now(), pageable);
+        Page<PartyEntity> partyEntities = partyRepository.findGeneralPartyListNotJoined(
+            memberId, LocalDateTime.now(), pageable
+        );
         return partyEntities.map(partyMapper::convertToResponseDTO);
     }
 
@@ -108,6 +110,7 @@ public class PartyService {
      */
     @Transactional(readOnly = true)
     public Page<PartyResponseDTO> getCustomPartyList(
+        Long memberId,
         Double userDepartureLng,
         Double userDepartureLat,
         Double userDestinationLng,
@@ -128,19 +131,23 @@ public class PartyService {
 
         Page<PartyEntity> entities = switch (variant) {
             case ALL -> partyRepository.findCustomPartyList(
+                memberId,
                 f.getDepLng(), f.getDepLat(),
                 f.getDstLng(), f.getDstLat(),
                 f.getDepTime(), pageable
             );
             case NO_DEPARTURE -> partyRepository.findCustomPartyList(
+                memberId,
                 f.getDstLng(), f.getDstLat(),
                 f.getDepTime(), pageable
             );
             case NO_DESTINATION -> partyRepository.findCustomPartyList(
+                memberId,
                 f.getDepLng(), f.getDepLat(),
                 f.getDepTime(), pageable
             );
             case NO_TIME -> partyRepository.findCustomPartyList(
+                memberId,
                 f.getDepLng(), f.getDepLat(),
                 f.getDstLng(), f.getDstLat(),
                 pageable
