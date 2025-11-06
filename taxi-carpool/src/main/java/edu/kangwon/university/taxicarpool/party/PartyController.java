@@ -59,8 +59,9 @@ public class PartyController {
         @Parameter(description = "페이지 번호 (0부터 시작)") @RequestParam(defaultValue = "0") @Min(value = 0, message = "페이지 번호는 0 이상이어야 합니다.") Integer page,
         @Parameter(description = "페이지 크기 (최소 1)") @RequestParam(defaultValue = "10") @Min(value = 1, message = "페이지 크기는 1 이상이어야 합니다.") Integer size
     ) {
-        Page<PartyResponseDTO> partyList = partyService.getPartyList(page, size);
-        return ResponseEntity.ok(partyList);
+        Long memberId = (Long) SecurityContextHolder
+            .getContext().getAuthentication().getPrincipal();
+        Page<PartyResponseDTO> partyList = partyService.getPartyList(memberId, page, size);        return ResponseEntity.ok(partyList);
     }
 
     @Operation(summary = "커스텀 파티 조회", description = "위치·시간 필터 적용 조회")
@@ -74,7 +75,10 @@ public class PartyController {
         @Parameter(description = "페이지 번호") @RequestParam(defaultValue = "0") @Min(value = 0, message = "페이지 번호는 0 이상이어야 합니다.") Integer page,
         @Parameter(description = "페이지 크기") @RequestParam(defaultValue = "10") @Min(value = 1, message = "페이지 크기는 1 이상이어야 합니다.") Integer size
     ) {
-        Page<PartyResponseDTO> partyList = partyService.getCustomPartyList(userDepartureLng,
+        Long memberId = (Long) SecurityContextHolder
+            .getContext().getAuthentication().getPrincipal();
+        Page<PartyResponseDTO> partyList = partyService.getCustomPartyList(memberId,
+            userDepartureLng,
             userDepartureLat,
             userDestinationLng, userDestinationLat,
             userDepartureTime, page, size);
