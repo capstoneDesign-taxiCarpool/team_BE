@@ -18,13 +18,20 @@ import edu.kangwon.university.taxicarpool.member.dto.MemberDetailDTO;
 import java.time.LocalDateTime;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.data.redis.core.RedisTemplate;
+import java.util.concurrent.TimeUnit;
 
 @Service
 @RequiredArgsConstructor
 public class AuthService {
+
+    private static final Logger log = LoggerFactory.getLogger(JwtAuthenticationFilter.class);
+    private static final String TOKEN_VERSION_KEY_PREFIX = "token:version:";
 
     private final MemberService memberService;
     private final EmailVerificationService emailVerificationService;
@@ -33,6 +40,7 @@ public class AuthService {
     private final RefreshTokenRepository refreshTokenRepository;
     private final MemberRepository memberRepository;
     private final FcmTokenRepository fcmTokenRepository;
+    private final RedisTemplate<String, String> redisTemplate;
 
     /**
      * 회원가입을 수행합니다.
@@ -78,7 +86,19 @@ public class AuthService {
         member.setTokenVersion(member.getTokenVersion() + 1);
         memberRepository.save(member);
 
-        String accessToken = jwtUtil.generateAccessToken(member.getId(), member.getTokenVersion());
+        int newVersion = member.getTokenVersion();
+
+        String key = TOKEN_VERSION_KEY_PREFIX + member.getId();
+        String value = String.valueOf(newVersion);
+
+        try {
+            redisTemplate.opsForValue().set(key, value, 7, TimeUnit.DAYS);
+
+        } catch (Exception e) {
+            log.error("Failed to save token version to Redis for memberId {}: {}", member.getId(), e.getMessage());
+        }
+
+        String accessToken = jwtUtil.generateAccessToken(member.getId(), newVersion);
         String refreshToken = jwtUtil.generateRefreshToken(member.getId());
 
         LocalDateTime refreshExpiry = LocalDateTime.now().plusDays(7);

@@ -7,6 +7,7 @@ import edu.kangwon.university.taxicarpool.auth.JwtUtil;
 import edu.kangwon.university.taxicarpool.member.MemberRepository;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
@@ -26,10 +27,12 @@ public class SecurityConfig {
 
     private final JwtUtil jwtUtil;
     private final MemberRepository memberRepository;
+    private final RedisTemplate<String, String> redisTemplate;
 
-    public SecurityConfig(JwtUtil jwtUtil, MemberRepository memberRepository) { // ★ 변경
+    public SecurityConfig(JwtUtil jwtUtil, MemberRepository memberRepository, RedisTemplate<String, String> redisTemplate) {
         this.jwtUtil = jwtUtil;
         this.memberRepository = memberRepository;
+        this.redisTemplate = redisTemplate;
     }
 
     @Bean
@@ -39,7 +42,7 @@ public class SecurityConfig {
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
-        JwtAuthenticationFilter jwtFilter = new JwtAuthenticationFilter(jwtUtil, memberRepository);
+        JwtAuthenticationFilter jwtFilter = new JwtAuthenticationFilter(jwtUtil, memberRepository, redisTemplate);
 
         http
             .cors(withDefaults())
