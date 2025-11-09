@@ -10,18 +10,27 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
+    private static final Logger log = LoggerFactory.getLogger(JwtAuthenticationFilter.class);
+    private static final String TOKEN_VERSION_KEY_PREFIX = "token:version:";
+
     private final JwtUtil jwtUtil;
     private final MemberRepository memberRepository;
+    private final RedisTemplate<String, String> redisTemplate;
 
-    public JwtAuthenticationFilter(JwtUtil jwtUtil, MemberRepository memberRepository) {
+    public JwtAuthenticationFilter(JwtUtil jwtUtil, MemberRepository memberRepository, RedisTemplate<String, String> redisTemplate) {
         this.jwtUtil = jwtUtil;
         this.memberRepository = memberRepository;
+        this.redisTemplate = redisTemplate;
     }
 
     @Override
@@ -38,15 +47,34 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             try {
                 // 2) 토큰 검증
                 if (jwtUtil.validateToken(token)) {
-                    // 3) 토큰에서 사용자 식별값(id) 추출
+                    // 3) 토큰에서 사용자 식별값(id)과 토큰 버전 추출
                     Long id = jwtUtil.getIdFromToken(token);
                     int verInToken = jwtUtil.getTokenVersionFromToken(token);
 
-                    // 3-1) DB의 최신 tokenVersion 조회
-                    int verInDb = memberRepository.findTokenVersionById(id);
+                    String key = TOKEN_VERSION_KEY_PREFIX + id;
+                    String versionFromCache = null;
 
-                    // 3-2) 버전 불일치면 "다른 기기에서 더 최근에 로그인" → 401
-                    if (verInToken != verInDb) {
+                    try {
+                        versionFromCache = redisTemplate.opsForValue().get(key);
+                    } catch (Exception e) {
+                        log.warn("Redis connection error (GET). Fallback to DB. MemberId: {}, Error: {}", id, e.getMessage());
+                    }
+
+                    int validVersion;
+
+                    if (versionFromCache != null) {
+                        validVersion = Integer.parseInt(versionFromCache);
+                    } else {
+                        validVersion = memberRepository.findTokenVersionById(id);
+
+                        try {
+                            redisTemplate.opsForValue().set(key, String.valueOf(validVersion), 7, TimeUnit.DAYS);
+                        } catch (Exception e) {
+                            log.warn("Redis connection error (SET). Failed to cache token version. MemberId: {}, Error: {}", id, e.getMessage());
+                        }
+                    }
+
+                    if (verInToken != validVersion) {
                         writeUnauthorized(response, "AUTH-VERSION-MISMATCH",
                             "다른 기기에서 더 최근에 로그인되어 현재 토큰이 무효화되었습니다. 다시 로그인해주세요.");
                         return;
@@ -55,12 +83,12 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                     // 4) 인증 객체 생성
                     UsernamePasswordAuthenticationToken authentication =
                         new UsernamePasswordAuthenticationToken(id, null, null);
-                    
-                    // 5) SecurityContextHolder에 등록(한 번의 request에서 필요한 사용자 정보를 공유하여 꺼내쓰기)
+
+                    // 5) SecurityContextHolder에 등록
                     SecurityContextHolder.getContext().setAuthentication(authentication);
                 }
             } catch (TokenExpiredException e) {
-                // 토큰 만료 시 401 응답 -> 프론트측에서 해당 예외처리 받고 Axios를 통해 재요청 보내기
+                // 토큰 만료 시 401 응답
                 writeUnauthorized(response, "AUTH-EXPIRED", "Access 토큰이 만료되었습니다.");
                 return;
             } catch (TokenInvalidException e) {
