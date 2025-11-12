@@ -16,32 +16,42 @@ import org.springframework.stereotype.Component;
 public class PartyMapper {
 
     public PartyResponseDTO convertToResponseDTO(PartyEntity partyEntity) {
+        MapPlaceDTO startDto = null;
+        MapPlaceDTO endDto = null;
+        PartyOptionDTO optionDto = null;
+
         MapPlace startPlace = partyEntity.getStartPlace();
+        if (startPlace != null) {
+            startDto = new MapPlaceDTO(
+                startPlace.getName(),
+                startPlace.getRoadAddressName(),
+                startPlace.getX(),
+                startPlace.getY()
+            );
+        }
         MapPlace endPlace = partyEntity.getEndPlace();
-        MapPlaceDTO startDto = new MapPlaceDTO(
-            startPlace.getName(),
-            startPlace.getRoadAddressName(),
-            startPlace.getX(),
-            startPlace.getY()
-        );
-        MapPlaceDTO endDto = new MapPlaceDTO(
-            endPlace.getName(),
-            endPlace.getRoadAddressName(),
-            endPlace.getX(),
-            endPlace.getY()
-        );
+        if (endPlace != null) {
+            endDto = new MapPlaceDTO(
+                endPlace.getName(),
+                endPlace.getRoadAddressName(),
+                endPlace.getX(),
+                endPlace.getY()
+            );
+        }
 
         List<Long> memberIds = partyEntity.getMemberEntities().stream()
             .map(MemberEntity::getId)
             .collect(Collectors.toList());
 
         PartyOption opt = partyEntity.getOptions();
-        PartyOptionDTO optionDto = new PartyOptionDTO(
-            opt.isSameGenderOnly(),
-            opt.isCostShareBeforeDropOff(),
-            opt.isQuietMode(),
-            opt.isDestinationChangeIn5Minutes()
-        );
+        if (opt != null) {
+            optionDto = new PartyOptionDTO(
+                opt.isSameGenderOnly(),
+                opt.isCostShareBeforeDropOff(),
+                opt.isQuietMode(),
+                opt.isDestinationChangeIn5Minutes()
+            );
+        }
 
         return new PartyResponseDTO(
             partyEntity.getId(),

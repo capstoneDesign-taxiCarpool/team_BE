@@ -47,7 +47,7 @@ public class MemberEntity {
     private int tokenVersion = 0;
 
     @Column(nullable = false)
-    private int partyCreateCount = 0;
+    private Integer partyCreateCount = 0;
 
     public MemberEntity(String email, String password, String nickname, Gender gender) {
         this.email = email;
