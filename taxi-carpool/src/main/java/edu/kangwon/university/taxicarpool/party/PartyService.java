@@ -1,6 +1,5 @@
 package edu.kangwon.university.taxicarpool.party;
 
-
 import edu.kangwon.university.taxicarpool.chatting.ChattingService;
 import edu.kangwon.university.taxicarpool.chatting.MessageType;
 import edu.kangwon.university.taxicarpool.fcm.FcmPushService;
@@ -22,6 +21,9 @@ import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
@@ -32,6 +34,7 @@ import org.springframework.data.domain.Sort.Direction;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+@Slf4j
 @Service
 public class PartyService {
 
@@ -42,18 +45,20 @@ public class PartyService {
     private final MemberRepository memberRepository;
     private final ChattingService chattingService;
     private final FcmPushService fcmPushService;
+    private final PartyAsyncService partyAsyncService;
 
     @Autowired
     PartyService(PartyRepository partyRepository,
         PartyMapper partyMapper,
         MemberRepository memberRepository, ChattingService chattingService,
-        FcmPushService fcmPushService
+        FcmPushService fcmPushService, PartyAsyncService partyAsyncService
     ) {
         this.partyRepository = partyRepository;
         this.partyMapper = partyMapper;
         this.memberRepository = memberRepository;
         this.chattingService = chattingService;
         this.fcmPushService = fcmPushService;
+        this.partyAsyncService = partyAsyncService;
     }
 
     /**
@@ -177,59 +182,30 @@ public class PartyService {
         PartyEntity partyEntity = partyMapper.convertToEntity(createRequestDTO);
 
         if (CreatorMemberId != null) {
-            partyEntity.setHostMemberId(
-                CreatorMemberId);
+            partyEntity.setHostMemberId(CreatorMemberId);
         } else {
             throw new IllegalArgumentException("파티방을 만든 멤버의 Id가 null임.");
         }
 
+        CompletableFuture<Long> kakaoFareFuture = partyAsyncService.getKakaoFareAsync(partyEntity);
+        partyAsyncService.updateMemberCountAsync(CreatorMemberId);
+        partyAsyncService.sendFcmNotificationAsync(partyEntity, CreatorMemberId);
+
         MemberEntity member = memberRepository.findById(CreatorMemberId)
             .orElseThrow(() -> new MemberNotFoundException("파티방을 만든 멤버가 존재하지 않습니다."));
 
-        member.incrementPartyCreateCount();
-        memberRepository.save(member);
-
-        double[] coords = PartyUtil.getValidatedCoords(partyEntity);
-        double sx = coords[0], sy = coords[1], ex = coords[2], ey = coords[3];
-        String[] od = PartyUtil.toOriginDestination(sx, sy, ex, ey);
-        String origin = od[0], destination = od[1];
-
-        LocalDateTime depTime = PartyUtil.ensureFutureDeparture(partyEntity.getStartDateTime());
-        String departureTime = PartyUtil.formatDeparture(depTime);
-
-        String url = PartyUtil.buildFutureDirectionsUrl(origin, destination, departureTime);
-        String kakaoBody = PartyUtil.fetchKakaoDirectionsJson(url, kakaoMobilityApiKey);
-        long totalTaxiFare = PartyUtil.extractTaxiFare(kakaoBody);
+        long totalTaxiFare = 0L;
+        try {
+            totalTaxiFare = kakaoFareFuture.get();
+        } catch (Exception e) {
+            log.warn("Kakao API 비동기 작업 실패, 기본값(0)으로 진행: {}", e.getMessage());
+        }
 
         partyEntity.setEstimatedFare(totalTaxiFare);
-
         partyEntity.getMemberEntities().add(member);
         partyEntity.setCurrentParticipantCount(1);
 
         PartyEntity savedPartyEntity = partyRepository.save(partyEntity);
-
-        try {
-            DateTimeFormatter timeFormatter = DateTimeFormatter.ofPattern("HH시 mm분");
-            String formattedTime = savedPartyEntity.getStartDateTime().format(timeFormatter);
-            String destinationName = savedPartyEntity.getEndPlace().getName();
-
-            String title = String.format("%s %s행 파티 생성 완료!", formattedTime, destinationName);
-            String fcmBody = "새로운 카풀 파티가 성공적으로 생성되었습니다.";
-
-            PushMessageDTO pushMessage = PushMessageDTO.builder()
-                .title(title)
-                .body(fcmBody)
-                .type("PARTY_CREATED")
-                .build();
-
-            pushMessage.getData().put("partyId", String.valueOf(savedPartyEntity.getId()));
-
-            fcmPushService.sendPushToUser(CreatorMemberId, pushMessage);
-
-        } catch (Exception e) {
-            System.err.println("FCM Send Failed (but party created): " + e.getMessage());
-        }
-
         return partyMapper.convertToResponseDTO(savedPartyEntity);
     }
 
