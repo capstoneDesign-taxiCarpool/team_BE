@@ -185,11 +185,51 @@ public class PartyService {
 
         MemberEntity member = memberRepository.findById(CreatorMemberId)
             .orElseThrow(() -> new MemberNotFoundException("파티방을 만든 멤버가 존재하지 않습니다."));
-        partyEntity.getMemberEntities().add(member);
 
+        member.incrementPartyCreateCount();
+        memberRepository.save(member);
+
+        double[] coords = PartyUtil.getValidatedCoords(partyEntity);
+        double sx = coords[0], sy = coords[1], ex = coords[2], ey = coords[3];
+        String[] od = PartyUtil.toOriginDestination(sx, sy, ex, ey);
+        String origin = od[0], destination = od[1];
+
+        LocalDateTime depTime = PartyUtil.ensureFutureDeparture(partyEntity.getStartDateTime());
+        String departureTime = PartyUtil.formatDeparture(depTime);
+
+        String url = PartyUtil.buildFutureDirectionsUrl(origin, destination, departureTime);
+        String kakaoBody = PartyUtil.fetchKakaoDirectionsJson(url, kakaoMobilityApiKey);
+        long totalTaxiFare = PartyUtil.extractTaxiFare(kakaoBody);
+
+        partyEntity.setEstimatedFare(totalTaxiFare);
+
+        partyEntity.getMemberEntities().add(member);
         partyEntity.setCurrentParticipantCount(1);
 
         PartyEntity savedPartyEntity = partyRepository.save(partyEntity);
+
+        try {
+            DateTimeFormatter timeFormatter = DateTimeFormatter.ofPattern("HH시 mm분");
+            String formattedTime = savedPartyEntity.getStartDateTime().format(timeFormatter);
+            String destinationName = savedPartyEntity.getEndPlace().getName();
+
+            String title = String.format("%s %s행 파티 생성 완료!", formattedTime, destinationName);
+            String fcmBody = "새로운 카풀 파티가 성공적으로 생성되었습니다.";
+
+            PushMessageDTO pushMessage = PushMessageDTO.builder()
+                .title(title)
+                .body(fcmBody)
+                .type("PARTY_CREATED")
+                .build();
+
+            pushMessage.getData().put("partyId", String.valueOf(savedPartyEntity.getId()));
+
+            fcmPushService.sendPushToUser(CreatorMemberId, pushMessage);
+
+        } catch (Exception e) {
+            System.err.println("FCM Send Failed (but party created): " + e.getMessage());
+        }
+
         return partyMapper.convertToResponseDTO(savedPartyEntity);
     }
 

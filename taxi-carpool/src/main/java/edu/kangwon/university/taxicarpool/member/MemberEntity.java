@@ -46,6 +46,9 @@ public class MemberEntity {
     @Column(nullable = false)
     private int tokenVersion = 0;
 
+    @Column(nullable = false)
+    private int partyCreateCount = 0;
+
     public MemberEntity(String email, String password, String nickname, Gender gender) {
         this.email = email;
         this.password = password;
@@ -80,5 +83,12 @@ public class MemberEntity {
             throw new IllegalArgumentException("누적 절감 금액은 음수가 될 수 없습니다.");
         }
         this.totalSavedAmount += amountToAdd;
+    }
+
+    /**
+     * 파티 생성 횟수를 1 증가
+     */
+    public void incrementPartyCreateCount() {
+        this.partyCreateCount++;
     }
 }

@@ -102,6 +102,9 @@ public class PartyEntity {
     @Column(name = "departure_notification_sent", nullable = false)
     private boolean departureNotificationSent = false;
 
+    @Column(name = "estimated_fare")
+    private long estimatedFare;
+
     public PartyEntity(
         Long hostMemberId,
         PartyOption options,
@@ -144,6 +147,10 @@ public class PartyEntity {
 
     public void setDepartureNotificationSent(boolean departureNotificationSent) {
         this.departureNotificationSent = departureNotificationSent;
+    }
+
+    public void setEstimatedFare(long estimatedFare) {
+        this.estimatedFare = estimatedFare;
     }
 
     public PartyEntity updateParty(
