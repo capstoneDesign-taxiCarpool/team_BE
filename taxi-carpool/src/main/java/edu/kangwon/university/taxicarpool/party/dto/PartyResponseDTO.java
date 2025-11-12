@@ -27,4 +27,5 @@ public class PartyResponseDTO {
     private MapPlaceDTO endPlace;
     private String notification;
     private boolean savingsCalculated;
+    private Long estimatedFare;
 }
