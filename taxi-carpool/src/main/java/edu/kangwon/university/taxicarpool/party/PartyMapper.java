@@ -68,7 +68,8 @@ public class PartyMapper {
             startDto,
             endDto,
             partyEntity.getNotification(),
-            partyEntity.isSavingsCalculated()
+            partyEntity.isSavingsCalculated(),
+            partyEntity.getEstimatedFare()
         );
     }
 
