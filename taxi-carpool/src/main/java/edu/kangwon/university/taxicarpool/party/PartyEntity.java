@@ -103,7 +103,7 @@ public class PartyEntity {
     private boolean departureNotificationSent = false;
 
     @Column(name = "estimated_fare")
-    private long estimatedFare;
+    private Long estimatedFare;
 
     public PartyEntity(
         Long hostMemberId,
