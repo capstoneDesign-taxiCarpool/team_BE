@@ -61,7 +61,8 @@ public class PartyController {
     ) {
         Long memberId = (Long) SecurityContextHolder
             .getContext().getAuthentication().getPrincipal();
-        Page<PartyResponseDTO> partyList = partyService.getPartyList(memberId, page, size);        return ResponseEntity.ok(partyList);
+        Page<PartyResponseDTO> partyList = partyService.getPartyList(memberId, page, size);
+        return ResponseEntity.ok(partyList);
     }
 
     @Operation(summary = "커스텀 파티 조회", description = "위치·시간 필터 적용 조회")
