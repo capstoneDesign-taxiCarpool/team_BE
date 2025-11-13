@@ -28,23 +28,19 @@ public class PartyAsyncService {
 
     /**
      * [비동기 작업 1] 카카오 API를 호출하여 예상 요금을 가져옵니다.
-     * I/O가 오래 걸리는 작업입니다.
      */
     @Async
     public CompletableFuture<Long> getKakaoFareAsync(PartyEntity partyEntity) {
         log.info("Starting Kakao API call in thread: {}", Thread.currentThread().getName());
         try {
-            // 1. 좌표 검증
             double[] coords = PartyUtil.getValidatedCoords(partyEntity);
             double sx = coords[0], sy = coords[1], ex = coords[2], ey = coords[3];
             String[] od = PartyUtil.toOriginDestination(sx, sy, ex, ey);
             String origin = od[0], destination = od[1];
 
-            // 2. 출발 시각 보정/포맷
             LocalDateTime depTime = PartyUtil.ensureFutureDeparture(partyEntity.getStartDateTime());
             String departureTime = PartyUtil.formatDeparture(depTime);
 
-            // 3. 외부 API 호출 (동기적 대기 발생)
             String url = PartyUtil.buildFutureDirectionsUrl(origin, destination, departureTime);
             String kakaoBody = PartyUtil.fetchKakaoDirectionsJson(url, kakaoMobilityApiKey);
             long totalTaxiFare = PartyUtil.extractTaxiFare(kakaoBody);
@@ -52,17 +48,15 @@ public class PartyAsyncService {
             return CompletableFuture.completedFuture(totalTaxiFare);
         } catch (Exception e) {
             log.warn("Kakao API call failed", e);
-            // 요금 계산 실패 시 0L 반환 (또는 예외를 throw하여 .exceptionally()로 처리)
             return CompletableFuture.completedFuture(0L);
         }
     }
 
     /**
      * [비동기 작업 2] 멤버의 파티 생성 횟수를 증가시킵니다.
-     * 별도의 트랜잭션으로 실행됩니다.
      */
     @Async
-    @Transactional // 이 작업 자체로 하나의 트랜잭션이 됩니다.
+    @Transactional
     public void updateMemberCountAsync(Long memberId) {
         log.info("Starting member count update in thread: {}", Thread.currentThread().getName());
         try {
@@ -77,7 +71,6 @@ public class PartyAsyncService {
 
     /**
      * [비동기 작업 3] FCM 푸시 알림을 전송합니다. (Fire-and-forget)
-     * [MODIFIED] partyId가 필요 없으므로, save 이전의 partyEntity를 받습니다.
      */
     @Async
     public void sendFcmNotificationAsync(PartyEntity partyEntity, Long creatorMemberId) {
@@ -99,7 +92,6 @@ public class PartyAsyncService {
             fcmPushService.sendPushToUser(creatorMemberId, pushMessage);
 
         } catch (Exception e) {
-            // 비동기 작업이므로 여기서 예외가 발생해도 메인 스레드에 영향을 주지 않습니다.
             log.warn("FCM 전송에 실패했으나 파티 생성은 완료되었습니다.", e);
         }
     }
