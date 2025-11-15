@@ -13,6 +13,7 @@ import edu.kangwon.university.taxicarpool.party.PartyUtil.SearchVariant;
 import edu.kangwon.university.taxicarpool.party.dto.PartyCreateRequestDTO;
 import edu.kangwon.university.taxicarpool.party.dto.PartyResponseDTO;
 import edu.kangwon.university.taxicarpool.party.dto.PartyUpdateRequestDTO;
+import edu.kangwon.university.taxicarpool.party.partyException.PartyFullException;
 import edu.kangwon.university.taxicarpool.party.partyException.PartyInvalidMaxParticipantException;
 import edu.kangwon.university.taxicarpool.party.partyException.PartyNotFoundException;
 import edu.kangwon.university.taxicarpool.party.partyException.UnauthorizedHostAccessException;
@@ -22,7 +23,10 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
 import lombok.extern.slf4j.Slf4j;
+import org.redisson.api.RLock;
+import org.redisson.api.RedissonClient;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
@@ -31,7 +35,10 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.domain.Sort.Direction;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 
 @Slf4j
 @Service
@@ -45,12 +52,15 @@ public class PartyService {
     private final ChattingService chattingService;
     private final FcmPushService fcmPushService;
     private final PartyAsyncService partyAsyncService;
+    private final RedissonClient redissonClient;
+    private final PlatformTransactionManager transactionManager;
 
     @Autowired
     PartyService(PartyRepository partyRepository,
         PartyMapper partyMapper,
         MemberRepository memberRepository, ChattingService chattingService,
-        FcmPushService fcmPushService, PartyAsyncService partyAsyncService
+        FcmPushService fcmPushService, PartyAsyncService partyAsyncService,
+        RedissonClient redissonClient, PlatformTransactionManager transactionManager
     ) {
         this.partyRepository = partyRepository;
         this.partyMapper = partyMapper;
@@ -58,6 +68,8 @@ public class PartyService {
         this.chattingService = chattingService;
         this.fcmPushService = fcmPushService;
         this.partyAsyncService = partyAsyncService;
+        this.redissonClient = redissonClient;
+        this.transactionManager = transactionManager;
     }
 
     /**
@@ -318,18 +330,45 @@ public class PartyService {
      * @throws edu.kangwon.university.taxicarpool.party.partyException.PartyFullException
      *         파티 정원이 가득 찬 경우
      */
-    @Transactional
+    @Transactional(propagation = Propagation.NEVER)
     public PartyResponseDTO joinParty(Long partyId, Long memberId) {
-        PartyEntity party = partyRepository.findByIdAndIsDeletedFalse(partyId)
-            .orElseThrow(() -> new PartyNotFoundException("해당 파티가 존재하지 않습니다."));
-        MemberEntity member = memberRepository.findById(memberId)
-            .orElseThrow(() -> new MemberNotFoundException("해당 멤버가 존재하지 않습니다."));
 
-        party.join(member);
+        final String lockKey = "party:join:" + partyId;
+        RLock lock = redissonClient.getLock(lockKey);
 
-        PartyEntity saved = partyRepository.save(party);
-        chattingService.createSystemMessage(saved, member, MessageType.ENTER);
-        return partyMapper.convertToResponseDTO(saved);
+        try {
+            boolean isLocked = lock.tryLock(0, 40, TimeUnit.SECONDS);
+
+            if (!isLocked) {
+                throw new PartyFullException("현재 이 방에 참여하려는 요청이 너무 많습니다. 잠시 후 다시 시도해주세요.");
+            }
+
+            TransactionTemplate txTemplate = new TransactionTemplate(transactionManager);
+
+            PartyResponseDTO result = txTemplate.execute(status -> {
+                PartyEntity party = partyRepository.findByIdAndIsDeletedFalse(partyId)
+                    .orElseThrow(() -> new PartyNotFoundException("해당 파티가 존재하지 않습니다."));
+                MemberEntity member = memberRepository.findById(memberId)
+                    .orElseThrow(() -> new MemberNotFoundException("해당 멤버가 존재하지 않습니다."));
+
+                party.join(member);
+
+                PartyEntity saved = partyRepository.save(party);
+                chattingService.createSystemMessage(saved, member, MessageType.ENTER);
+
+                return partyMapper.convertToResponseDTO(saved);
+            });
+
+            return result;
+
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new RuntimeException("락을 기다리는 중 인터럽트가 발생했습니다.", e);
+        } finally {
+            if (lock.isLocked() && lock.isHeldByCurrentThread()) {
+                lock.unlock();
+            }
+        }
     }
 
     /**
