@@ -19,6 +19,10 @@ import java.util.ArrayList;
 import java.util.List;
 
 @Entity(name = "party")
+@Table(name = "party", indexes = {
+    @Index(name = "idx_party_list_search", columnList = "isDeleted, startDateTime"),
+    @Index(name = "idx_party_reminder_search", columnList = "isDeleted, departureNotificationSent, startDateTime")
+})
 @EntityListeners(AuditingEntityListener.class)
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
@@ -39,7 +43,11 @@ public class PartyEntity {
     @JoinTable(
         name = "party_member",
         joinColumns = @JoinColumn(name = "party_id"),
-        inverseJoinColumns = @JoinColumn(name = "member_id")
+        inverseJoinColumns = @JoinColumn(name = "member_id"),
+        indexes = {
+            @Index(name = "idx_party_member_member_id", columnList = "member_id"),
+            @Index(name = "idx_party_member_party_id", columnList = "party_id")
+        }
     )
     private List<MemberEntity> memberEntities = new ArrayList<>();
 
