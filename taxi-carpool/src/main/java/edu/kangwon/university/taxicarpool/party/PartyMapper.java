@@ -2,6 +2,7 @@ package edu.kangwon.university.taxicarpool.party;
 
 import edu.kangwon.university.taxicarpool.map.MapPlace;
 import edu.kangwon.university.taxicarpool.map.MapPlaceDTO;
+import edu.kangwon.university.taxicarpool.member.Gender;
 import edu.kangwon.university.taxicarpool.party.dto.PartyCreateRequestDTO;
 import edu.kangwon.university.taxicarpool.party.dto.PartyOptionDTO;
 import edu.kangwon.university.taxicarpool.party.dto.PartyResponseDTO;
@@ -43,6 +44,12 @@ public class PartyMapper {
             .map(MemberEntity::getId)
             .collect(Collectors.toList());
 
+        Gender hostGender = partyEntity.getMemberEntities().stream()
+            .filter(member -> member.getId().equals(partyEntity.getHostMemberId()))
+            .findFirst()
+            .map(MemberEntity::getGender)
+            .orElse(null);
+
         PartyOption opt = partyEntity.getOptions();
         if (opt != null) {
             optionDto = new PartyOptionDTO(
@@ -59,6 +66,7 @@ public class PartyMapper {
             partyEntity.isDeleted(),
             memberIds,
             partyEntity.getHostMemberId(),
+            hostGender,
             partyEntity.getEndDate(),
             optionDto,
             partyEntity.getStartDateTime(),
