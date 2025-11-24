@@ -1,6 +1,7 @@
 package edu.kangwon.university.taxicarpool.party.dto;
 
 import edu.kangwon.university.taxicarpool.map.MapPlaceDTO;
+import edu.kangwon.university.taxicarpool.member.Gender;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -17,6 +18,7 @@ public class PartyResponseDTO {
     private boolean isDeleted;
     private List<Long> memberIds;
     private Long hostMemberId;
+    private Gender hostGender;
     private LocalDateTime endDate;
     private PartyOptionDTO options;
     private LocalDateTime startDateTime;
