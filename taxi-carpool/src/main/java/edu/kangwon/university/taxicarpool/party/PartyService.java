@@ -494,6 +494,9 @@ public class PartyService {
         result.put("totalTaxiFare", totalTaxiFare);
         result.put("eachShare", eachShare);
         result.put("savingPerMember", savingPerMember);
+
+        log.info(">>>> 절감액 계산 완료! partyId: {}, 인당 절감액: {}", partyId, savingPerMember);
+
         return result;
     }
 
