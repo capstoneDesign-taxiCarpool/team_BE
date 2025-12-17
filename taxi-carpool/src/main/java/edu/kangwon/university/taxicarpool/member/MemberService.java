@@ -3,7 +3,6 @@ package edu.kangwon.university.taxicarpool.member;
 import edu.kangwon.university.taxicarpool.auth.RefreshTokenRepository;
 import edu.kangwon.university.taxicarpool.auth.reset.PasswordResetTokenRepository;
 import edu.kangwon.university.taxicarpool.chatting.MessageRepository;
-import edu.kangwon.university.taxicarpool.email.EmailVerificationRepository;
 import edu.kangwon.university.taxicarpool.fcm.FcmTokenRepository;
 import edu.kangwon.university.taxicarpool.member.dto.MemberCreateDTO;
 import edu.kangwon.university.taxicarpool.member.dto.MemberDetailDTO;
@@ -31,7 +30,6 @@ public class MemberService {
     private final FcmTokenRepository fcmTokenRepository;
     private final MessageRepository messageRepository;
     private final PasswordResetTokenRepository passwordResetTokenRepository;
-    private final EmailVerificationRepository emailVerificationRepository;
 
     /**
      * 회원을 생성합니다.
