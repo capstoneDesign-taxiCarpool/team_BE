@@ -2,6 +2,7 @@ package edu.kangwon.university.taxicarpool.chatting;
 
 import edu.kangwon.university.taxicarpool.member.MemberEntity;
 import java.util.List;
+import java.util.Optional;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
@@ -23,6 +24,14 @@ public interface MessageRepository extends JpaRepository<MessageEntity, Long> {
         "ORDER BY m.id ASC")
     List<MessageEntity> findByPartyIdOrderByIdAsc(@Param("partyId") Long partyId,
         Pageable pageable);
+
+    @Query("SELECT MAX(m.id) FROM MessageEntity m " +
+        "WHERE m.party.id = :partyId " +
+        "AND m.sender.id = :memberId " +
+        "AND m.type = 'ENTER'")
+    Optional<Long> findLastEnterMessageId(
+        @Param("partyId") Long partyId,
+        @Param("memberId") Long memberId);
 
     @Modifying
     @Query("UPDATE MessageEntity m SET m.sender = null WHERE m.sender = :member")
