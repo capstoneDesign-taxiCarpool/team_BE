@@ -42,7 +42,7 @@ public class ChattingController {
     @GetMapping("/messages")
     public ResponseEntity<List<MessageResponseDTO>> getMessageHistory(
         @Parameter(description = "조회할 파티 ID") @PathVariable Long partyId,
-        @Parameter(description = "기준이 되는 메세지 ID")
+        @Parameter(description = "기준이 되는 메세지 ID (이 값 이후의 메시지를 조회)")
         @RequestParam(required = false) Long afterMessageId,
         @Parameter(description = "최대 메시지 개수")
         @RequestParam(required = false, defaultValue = "20") int maxResults) {
