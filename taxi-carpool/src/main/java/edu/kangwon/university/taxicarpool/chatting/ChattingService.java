@@ -97,22 +97,26 @@ public class ChattingService {
     public List<MessageResponseDTO> getMessageHistory(Long partyId, Long memberId,
         Long afterMessageId, int limit) {
 
-        validateMemberInParty(partyId, memberId);
+        PartyEntity party = validateMemberInParty(partyId, memberId);
 
-        Pageable pageable = PageRequest.of(0, limit);
-        List<MessageEntity> messages;
+        long minAllowedId = 0L;
+        boolean isHost = party.getHostMemberId().equals(memberId);
 
-        if (afterMessageId == null) {
-            // afterMessageId가 null인 경우 모든 메시지를 가져옴
-            messages = messageRepository.findByPartyIdOrderByIdAsc(partyId, pageable);
-        } else {
-            // afterMessageId가 주어진 경우 해당 ID보다 큰 메시지들을 가져옴
-            messages = messageRepository.findByPartyIdAndIdGreaterThanOrderByIdAsc(partyId,
-                afterMessageId, pageable);
+        if (!isHost) {
+            minAllowedId = messageRepository.findLastEnterMessageId(partyId, memberId)
+                .orElse(0L);
         }
 
+        long requestedId = (afterMessageId == null) ? 0L : afterMessageId;
+
+        long targetId = Math.max(minAllowedId, requestedId);
+
+        Pageable pageable = PageRequest.of(0, limit);
+        List<MessageEntity> messages = messageRepository.findByPartyIdAndIdGreaterThanOrderByIdAsc(partyId, targetId, pageable);
+
         return messages.stream()
-            .map(messageMapper::convertToResponseDTO).toList();
+            .map(messageMapper::convertToResponseDTO)
+            .toList();
 
     }
 
@@ -126,7 +130,7 @@ public class ChattingService {
      * @throws edu.kangwon.university.taxicarpool.party.partyException.MemberNotInPartyException
      *         멤버가 파티에 속해있지 않은 경우
      */
-    private void validateMemberInParty(Long partyId, Long memberId) {
+    private PartyEntity validateMemberInParty(Long partyId, Long memberId) {
         PartyEntity party = partyRepository.findById(partyId)
             .orElseThrow(() -> new PartyNotFoundException("파티를 찾을 수 없습니다."));
 
@@ -136,6 +140,8 @@ public class ChattingService {
         if (!isMember) {
             throw new MemberNotInPartyException("해당 파티의 멤버가 아닙니다.");
         }
+
+        return party;
     }
 
     /**
