@@ -75,6 +75,7 @@ public class FcmPushService {
                 .setAps(Aps.builder()
                     .setSound("default")
                     .setBadge(1)
+                    .setContentAvailable(true)
                     .build())
                 .build());
         } else {
