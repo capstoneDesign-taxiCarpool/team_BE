@@ -34,4 +34,14 @@ public class MapController {
         return ResponseEntity.ok(result);
     }
 
+    @Operation(summary = "좌표로 주소 변환", description = "위도/경도를 받아 해당 위치의 장소명(건물명)을 반환합니다.")
+    @GetMapping("/reverse-geocoding")
+    public ResponseEntity<MapSearchResponseDTO> getAddressByCoordinates(
+        @Parameter(description = "위도(y)", required = true) @RequestParam double latitude,
+        @Parameter(description = "경도(x)", required = true) @RequestParam double longitude
+    ) {
+        MapSearchResponseDTO result = mapService.reverseGeocoding(latitude, longitude);
+        return ResponseEntity.ok(result);
+    }
+
 }
