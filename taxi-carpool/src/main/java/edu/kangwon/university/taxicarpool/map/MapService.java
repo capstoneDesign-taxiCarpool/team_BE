@@ -98,4 +98,109 @@ public class MapService {
             throw new KakaoApiParseException("카카오 API 응답 파싱 실패");
         }
     }
+
+    public MapSearchResponseDTO reverseGeocoding(double latitude, double longitude) {
+        try {
+            String keywordUrl = UriComponentsBuilder.fromUriString("https://dapi.kakao.com/v2/local/search/keyword.json")
+                .queryParam("query", "강원대학교")
+                .queryParam("x", longitude)
+                .queryParam("y", latitude)
+                .queryParam("radius", 200)
+                .queryParam("sort", "distance")
+                .build()
+                .toUriString();
+
+            HttpHeaders headers = new HttpHeaders();
+            headers.set("Authorization", "KakaoAK " + kakaoApiKey);
+            HttpEntity<Void> entity = new HttpEntity<>(headers);
+
+            ResponseEntity<String> response = restTemplate.exchange(
+                keywordUrl, HttpMethod.GET, entity, String.class
+            );
+
+            MapSearchResponseDTO result = parseKeywordResponse(response.getBody(), latitude, longitude);
+
+            if (!result.getPlaces().isEmpty() &&
+                !"알 수 없는 장소".equals(result.getPlaces().get(0).getName())) {
+                return result;
+            }
+
+        } catch (Exception e) {
+            System.out.println("1차 건물 검색 실패, 2차 주소 변환 시도: " + e.getMessage());
+        }
+
+        return searchAddressAsFallback(latitude, longitude);
+    }
+
+    private MapSearchResponseDTO parseKeywordResponse(String jsonBody, double lat, double lng) {
+        ObjectMapper objectMapper = new ObjectMapper();
+        List<MapPlaceDTO> places = new ArrayList<>();
+
+        try {
+            JsonNode root = objectMapper.readTree(jsonBody);
+            JsonNode documents = root.get("documents");
+
+            if (documents.isArray() && documents.size() > 0) {
+                JsonNode doc = documents.get(0);
+
+                String placeName = doc.get("place_name").asText();
+                String roadAddr = doc.get("road_address_name").asText();
+                String jibunAddr = doc.get("address_name").asText();
+
+                String fullAddress = (roadAddr != null && !roadAddr.isEmpty()) ? roadAddr : jibunAddr;
+
+                places.add(new MapPlaceDTO(placeName, fullAddress, lng, lat));
+            } else {
+                places.add(new MapPlaceDTO("알 수 없는 장소", "", lng, lat));
+            }
+
+        } catch (JsonProcessingException e) {
+            return new MapSearchResponseDTO(List.of(new MapPlaceDTO("알 수 없는 장소", "", lng, lat)));
+        }
+
+        return new MapSearchResponseDTO(places);
+    }
+
+    private MapSearchResponseDTO searchAddressAsFallback(double latitude, double longitude) {
+        String addressUrl = UriComponentsBuilder.fromUriString("https://dapi.kakao.com/v2/local/geo/coord2address.json")
+            .queryParam("x", longitude)
+            .queryParam("y", latitude)
+            .build().toUriString();
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.set("Authorization", "KakaoAK " + kakaoApiKey);
+        HttpEntity<Void> entity = new HttpEntity<>(headers);
+
+        try {
+            ResponseEntity<String> response = restTemplate.exchange(
+                addressUrl, HttpMethod.GET, entity, String.class
+            );
+
+            ObjectMapper mapper = new ObjectMapper();
+            JsonNode root = mapper.readTree(response.getBody());
+            JsonNode documents = root.get("documents");
+
+            if (documents.isArray() && documents.size() > 0) {
+                JsonNode doc = documents.get(0);
+
+                String addressName = "";
+
+                if (doc.has("road_address") && !doc.get("road_address").isNull()) {
+                    addressName = doc.get("road_address").get("address_name").asText();
+                } else {
+                    addressName = doc.get("address").get("address_name").asText();
+                }
+
+                return new MapSearchResponseDTO(List.of(
+                    new MapPlaceDTO(addressName, addressName, longitude, latitude)
+                ));
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        return new MapSearchResponseDTO(List.of(
+            new MapPlaceDTO("위치 정보 없음", "주소를 찾을 수 없습니다.", longitude, latitude)
+        ));
+    }
 }

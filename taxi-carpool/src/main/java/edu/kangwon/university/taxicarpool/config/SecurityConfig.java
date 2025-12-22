@@ -69,7 +69,8 @@ public class SecurityConfig {
                 ).permitAll()
 
                 .requestMatchers(HttpMethod.GET,
-                    "/api/map/search"
+                    "/api/map/search",
+                    "/api/map/reverse-geocoding"
                 ).permitAll()
                 // 그 외 모든 요청은 인증 필요
                 .anyRequest().authenticated()
