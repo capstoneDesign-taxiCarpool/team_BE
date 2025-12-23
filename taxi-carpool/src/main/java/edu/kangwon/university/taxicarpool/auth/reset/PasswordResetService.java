@@ -164,12 +164,13 @@ public class PasswordResetService {
             String htmlContent = "<html>" +
                 "<body>" +
                 "<h3>[강원대 택시카풀] 비밀번호 재설정</h3>" +
-                "<p>아래 링크를 클릭하면 앱으로 이동하여 비밀번호를 재설정할 수 있습니다.</p>" +
+                "<p>비밀번호 재설정을 위해 아래 버튼을 눌러주세요.</p>" +
+                // 빨간색 텍스트로 모바일 환경 강조
+                "<p style='color: #d9534f; font-weight: bold;'>※ 반드시 앱이 설치된 모바일 환경에서 눌러야 정상적으로 연결됩니다.</p>" +
                 "<br/>" +
-                "<div><a href='" + resetLink + "' style='background-color: #007bff; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block;'>앱에서 비밀번호 변경하기</a></div>" +
+                // 버튼 (a 태그)
+                "<div><a href='" + resetLink + "' style='background-color: #007bff; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block; font-weight: bold;'>앱에서 비밀번호 변경하기</a></div>" +
                 "<br/>" +
-                "<p>(혹은 아래 주소를 복사해서 사용하세요)</p>" +
-                "<p>" + resetLink + "</p>" +
                 "<br/>" +
                 "<p style='color: gray; font-size: 12px;'>링크 유효시간: " + RESET_TOKEN_MINUTES + "분</p>" +
                 "</body>" +
