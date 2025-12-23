@@ -160,14 +160,26 @@ public class PasswordResetService {
             helper.setFrom(new InternetAddress(emailAddress, emailName));
             helper.setTo(to);
             helper.setSubject("[강원대 택시카풀] 비밀번호 재설정 안내");
-            helper.setText(
-                "아래 링크를 통해 비밀번호를 재설정하세요.\n\n" + resetLink +
-                    "\n\n링크 유효시간: " + RESET_TOKEN_MINUTES + "분",
-                false
-            );
+
+            String htmlContent = "<html>" +
+                "<body>" +
+                "<h3>[강원대 택시카풀] 비밀번호 재설정</h3>" +
+                "<p>아래 링크를 클릭하면 앱으로 이동하여 비밀번호를 재설정할 수 있습니다.</p>" +
+                "<br/>" +
+                "<div><a href='" + resetLink + "' style='background-color: #007bff; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block;'>앱에서 비밀번호 변경하기</a></div>" +
+                "<br/>" +
+                "<p>(혹은 아래 주소를 복사해서 사용하세요)</p>" +
+                "<p>" + resetLink + "</p>" +
+                "<br/>" +
+                "<p style='color: gray; font-size: 12px;'>링크 유효시간: " + RESET_TOKEN_MINUTES + "분</p>" +
+                "</body>" +
+                "</html>";
+
+            helper.setText(htmlContent, true);
+
             mailSender.send(message);
         } catch (Exception e) {
-
+            e.printStackTrace();
             throw new EmailSendFailedException("비밀번호 재설정 메일 전송 실패");
         }
     }
