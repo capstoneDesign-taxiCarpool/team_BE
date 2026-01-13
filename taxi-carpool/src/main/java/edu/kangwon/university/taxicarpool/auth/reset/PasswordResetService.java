@@ -5,9 +5,7 @@ import edu.kangwon.university.taxicarpool.auth.authException.TokenExpiredExcepti
 import edu.kangwon.university.taxicarpool.auth.authException.TokenInvalidException;
 import edu.kangwon.university.taxicarpool.email.exception.EmailSendFailedException;
 import edu.kangwon.university.taxicarpool.member.MemberEntity;
-import edu.kangwon.university.taxicarpool.member.MemberRepository;
 import edu.kangwon.university.taxicarpool.member.MemberService;
-import edu.kangwon.university.taxicarpool.member.exception.MemberNotFoundException;
 import jakarta.mail.internet.InternetAddress;
 import jakarta.mail.internet.MimeMessage;
 import org.springframework.beans.factory.annotation.Value;
@@ -165,10 +163,8 @@ public class PasswordResetService {
                 "<body>" +
                 "<h3>[강원대 택시카풀] 비밀번호 재설정</h3>" +
                 "<p>비밀번호 재설정을 위해 아래 버튼을 눌러주세요.</p>" +
-                // 빨간색 텍스트로 모바일 환경 강조
                 "<p style='color: #d9534f; font-weight: bold;'>※ 반드시 앱이 설치된 모바일 환경에서 눌러야 정상적으로 연결됩니다.</p>" +
                 "<br/>" +
-                // 버튼 (a 태그)
                 "<div><a href='" + resetLink + "' style='background-color: #007bff; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block; font-weight: bold;'>앱에서 비밀번호 변경하기</a></div>" +
                 "<br/>" +
                 "<br/>" +
