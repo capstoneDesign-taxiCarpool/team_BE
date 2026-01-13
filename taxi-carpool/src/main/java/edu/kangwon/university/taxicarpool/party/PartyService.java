@@ -18,7 +18,6 @@ import edu.kangwon.university.taxicarpool.party.partyException.PartyInvalidMaxPa
 import edu.kangwon.university.taxicarpool.party.partyException.PartyNotFoundException;
 import edu.kangwon.university.taxicarpool.party.partyException.UnauthorizedHostAccessException;
 import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -285,21 +284,13 @@ public class PartyService {
 
         partyEntity.setDeleted(true);
 
-        // FCM 푸시 발송
         if (!targetIds.isEmpty()) {
-            DateTimeFormatter timeFormatter = DateTimeFormatter.ofPattern("HH시 mm분");
-            String formattedTime = partyEntity.getStartDateTime().format(timeFormatter);
-            String destinationName = partyEntity.getEndPlace().getName();
-
-            String title = String.format("%s %s행 카풀방", formattedTime, destinationName);
-            String body = "호스트에 의해 파티가 삭제되었습니다.";
-
-            PushMessageDTO msg = PushMessageDTO.builder()
-                .title(title)
-                .body(body)
-                .type("PARTY_DELETED")
-                .data(Map.of("partyId", String.valueOf(partyId)))
-                .build();
+            PushMessageDTO msg = PartyUtil.createPartyPushMessage(
+                partyEntity,
+                "호스트에 의해 파티가 삭제되었습니다.",
+                "PARTY_DELETED",
+                null
+            );
             fcmPushService.sendPushToUsers(targetIds, msg);
         }
 
@@ -356,6 +347,21 @@ public class PartyService {
                 PartyEntity saved = partyRepository.save(party);
                 chattingService.createSystemMessage(saved, member, MessageType.ENTER);
 
+                List<Long> targetIds = saved.getMemberEntities().stream()
+                    .map(MemberEntity::getId)
+                    .filter(id -> !id.equals(memberId))
+                    .toList();
+
+                if (!targetIds.isEmpty()) {
+                    PushMessageDTO msg = PartyUtil.createPartyPushMessage(
+                        saved,
+                        member.getNickname() + "님이 파티에 참여했습니다.",
+                        "PARTY_ENTER",
+                        Map.of("enterMemberId", String.valueOf(memberId))
+                    );
+                    fcmPushService.sendPushToUsers(targetIds, msg);
+                }
+
                 return partyMapper.convertToResponseDTO(saved);
             });
 
@@ -398,6 +404,21 @@ public class PartyService {
 
         PartyEntity saved = partyRepository.save(party);
         chattingService.createSystemMessage(party, member, MessageType.LEAVE);
+
+        if (!saved.isDeleted() && !saved.getMemberEntities().isEmpty()) {
+            List<Long> targetIds = saved.getMemberEntities().stream()
+                .map(MemberEntity::getId)
+                .toList();
+
+            PushMessageDTO msg = PartyUtil.createPartyPushMessage(
+                saved,
+                member.getNickname() + "님이 파티에서 나갔습니다.",
+                "PARTY_LEAVE",
+                Map.of("leaveMemberId", String.valueOf(memberId))
+            );
+            fcmPushService.sendPushToUsers(targetIds, msg);
+        }
+
         return partyMapper.convertToResponseDTO(saved);
     }
 
