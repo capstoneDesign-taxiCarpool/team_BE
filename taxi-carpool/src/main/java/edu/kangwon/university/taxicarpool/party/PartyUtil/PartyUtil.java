@@ -2,6 +2,7 @@ package edu.kangwon.university.taxicarpool.party.PartyUtil;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import edu.kangwon.university.taxicarpool.fcm.dto.PushMessageDTO;
 import edu.kangwon.university.taxicarpool.member.MemberEntity;
 import edu.kangwon.university.taxicarpool.party.PartyEntity;
 import edu.kangwon.university.taxicarpool.party.partyException.KakaoApiException;
@@ -12,7 +13,9 @@ import edu.kangwon.university.taxicarpool.party.partyException.UnauthorizedHostA
 import java.io.IOException;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
@@ -182,5 +185,29 @@ public final class PartyUtil {
         long eachShare = totalTaxiFare / participants;
         long savingPerMember = totalTaxiFare - eachShare;
         return new long[]{eachShare, savingPerMember};
+    }
+
+    /** FCM 푸시 알림 메시지 DTO 생성 공통 유틸 메서드 */
+    public static PushMessageDTO createPartyPushMessage(PartyEntity party, String body, String type, Map<String, String> additionalData) {
+
+        DateTimeFormatter timeFormatter = DateTimeFormatter.ofPattern("HH시 mm분");
+        String formattedTime = party.getStartDateTime().format(timeFormatter);
+        String destinationName = party.getEndPlace().getName();
+
+        String title = String.format("%s %s행 카풀방", formattedTime, destinationName);
+
+        Map<String, String> data = new HashMap<>();
+        data.put("partyId", String.valueOf(party.getId()));
+
+        if (additionalData != null) {
+            data.putAll(additionalData);
+        }
+
+        return PushMessageDTO.builder()
+            .title(title)
+            .body(body)
+            .type(type)
+            .data(data)
+            .build();
     }
 }
