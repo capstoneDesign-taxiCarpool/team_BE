@@ -32,11 +32,9 @@ public class PasswordResetService {
     @Value("${email.name}")
     private String emailName;
 
-    // 프론트 리셋 페이지 베이스 URL
     @Value("${app.password-reset.base-url:http://localhost:3000/reset-password}")
     private String resetBaseUrl;
 
-    // 1회용 토큰 유효시간(분)
     private static final long RESET_TOKEN_MINUTES = 10;
 
     public PasswordResetService(MemberService memberService,
