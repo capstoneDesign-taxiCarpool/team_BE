@@ -65,7 +65,8 @@ public class SecurityConfig {
                     "/api-docs/**",          // 스웨거 API 문서
                     "/swagger-resources/**",    // 스웨거 리소스
                     "/webjars/**",              // 스웨거 관련 정적 리소스
-                    "/h2-console/**"
+                    "/h2-console/**",
+                    "/.well-known/**"
                 ).permitAll()
 
                 .requestMatchers(HttpMethod.GET,
