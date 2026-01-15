@@ -105,7 +105,7 @@ public class PasswordResetService {
      */
     @Transactional
     public void resetPassword(String token, String newPassword) {
-        // 1) 토큰 기본 검증(서명/만료)
+        // 1) 토큰 기본 검증 (서명/만료)
         var claims = jwtUtil.parseClaims(token);
         Long memberId = Long.valueOf(claims.getSubject());
         String jti = String.valueOf(claims.get("jti"));
