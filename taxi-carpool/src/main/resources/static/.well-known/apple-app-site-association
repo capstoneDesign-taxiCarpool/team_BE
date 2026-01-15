@@ -1,0 +1,16 @@
+{
+  "applinks": {
+    "apps": [],
+    "details": [
+      {
+        "appID": "VAXVS3URWH.knu.taxi.carpool",
+        "components": [
+          {
+            "/": "/reset_password",
+            "comment": "비밀번호 재설정 페이지 연결"
+          }
+        ]
+      }
+    ]
+  }
+}

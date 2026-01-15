@@ -1,0 +1,12 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "edu.kangwon.taxiCarpool",
+      "sha256_cert_fingerprints": [
+        "DA:81:56:3D:8D:36:CE:27:27:B0:55:F4:DF:28:9A:82:6D:9A:94:B2:3F:12:08:07:E8:DA:BC:D4:AE:6B:82:EA"
+      ]
+    }
+  }
+]
