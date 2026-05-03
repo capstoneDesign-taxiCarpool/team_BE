@@ -52,7 +52,7 @@ public class PartyFacade {
         RLock lock = redissonClient.getFairLock(lockKey);
 
         try {
-            boolean isLocked = lock.tryLock(10, 20, TimeUnit.SECONDS);
+            boolean isLocked = lock.tryLock(3, 5, TimeUnit.SECONDS);
 
             if (!isLocked) {
                 throw new PartyFullException("현재 파티 참여 요청이 많습니다. 잠시 후에 시도해주세요.");
